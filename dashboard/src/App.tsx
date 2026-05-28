@@ -128,7 +128,7 @@ const DashboardOverview = ({ uiConfig }: { uiConfig: UiConfig }) => (
             <p className="text-sm text-slate-500">{uiConfig.supportEmail ?? 'Support contact not configured'}</p>
           </div>
         </div>
-        <div className="mt-6 grid grid-cols-2 gap-3">
+        <div className="mt-6 grid grid-cols-1 gap-3 sm:grid-cols-2">
           <div className="rounded-lg border border-slate-800 bg-slate-950/50 p-3">
             <p className="text-xs uppercase tracking-[0.2em] text-slate-500">Primary</p>
             <div className="mt-3 flex items-center gap-3">
@@ -195,7 +195,7 @@ const SEP24Flow = ({ type, uiConfig }: { type: 'deposit' | 'withdraw'; uiConfig:
   const transactionFields = uiConfig.fieldRequirements[type];
 
   return (
-    <div className="mx-auto max-w-4xl glass-card p-8">
+    <div className="mx-auto max-w-4xl glass-card p-6 sm:p-8">
       <div className="mb-8 flex justify-between">
         {[1, 2, 3].map((s) => (
           <div key={s} className="flex items-center">
@@ -292,7 +292,8 @@ const SEP24Flow = ({ type, uiConfig }: { type: 'deposit' | 'withdraw'; uiConfig:
 
 const App = () => {
   const [activeTab, setActiveTab] = useState('dashboard');
-  const [sidebarOpen, setSidebarOpen] = useState(true);
+  // Sidebar is open by default on desktop, but collapsed on smaller mobile viewports.
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [uiConfig, setUiConfig] = useState<UiConfig>(defaultUiConfig);
   const [loadingState, setLoadingState] = useState<'loading' | 'ready' | 'error'>('loading');
 
@@ -323,6 +324,18 @@ const App = () => {
 
     return () => {
       ignore = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    const mediaQuery = window.matchMedia('(min-width: 1024px)');
+    const handleMediaChange = (event: MediaQueryListEvent) => setSidebarOpen(event.matches);
+
+    setSidebarOpen(mediaQuery.matches);
+    mediaQuery.addEventListener('change', handleMediaChange);
+
+    return () => {
+      mediaQuery.removeEventListener('change', handleMediaChange);
     };
   }, []);
 
@@ -385,8 +398,8 @@ const App = () => {
       </aside>
 
       <main className="flex min-w-0 flex-1 flex-col">
-        <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-slate-800 bg-background/50 px-8 backdrop-blur-md">
-          <button className="lg:hidden" onClick={() => setSidebarOpen(!sidebarOpen)}>
+        <header className="sticky top-0 z-40 flex h-16 items-center justify-between border-b border-slate-800 bg-background/50 px-4 sm:px-6 lg:px-8 backdrop-blur-md">
+          <button aria-label="Toggle navigation" className="lg:hidden" onClick={() => setSidebarOpen(!sidebarOpen)}>
             {sidebarOpen ? <X /> : <Menu />}
           </button>
 
@@ -404,7 +417,7 @@ const App = () => {
           </div>
         </header>
 
-        <section className="mx-auto w-full max-w-7xl p-8">
+        <section className="mx-auto w-full max-w-7xl px-4 py-8 sm:px-6 lg:px-8">
           <div className="mb-8 flex flex-col gap-3 md:flex-row md:items-start md:justify-between">
             <div>
               <h2 className="font-display text-3xl font-bold">
