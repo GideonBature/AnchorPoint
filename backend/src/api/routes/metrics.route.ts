@@ -1,6 +1,5 @@
 import { Router, Request, Response } from 'express';
 import { metricsService } from '../../services/metrics.service';
-import { queueMetricsService } from '../../services/queue-metrics.service';
 
 const router = Router();
 
@@ -11,9 +10,6 @@ const router = Router();
  */
 router.get('/', async (req: Request, res: Response) => {
   try {
-    // Update queue metrics before returning
-    await queueMetricsService.updateMetrics();
-    
     const metrics = await metricsService.getMetrics();
     res.set('Content-Type', metricsService.getRegistry().contentType);
     res.send(metrics);
@@ -32,9 +28,6 @@ router.get('/', async (req: Request, res: Response) => {
  */
 router.get('/json', async (req: Request, res: Response) => {
   try {
-    // Update queue metrics before returning
-    await queueMetricsService.updateMetrics();
-    
     const metrics = await metricsService.getRegistry().getMetricsAsJSON();
     res.json(metrics);
   } catch (error) {
