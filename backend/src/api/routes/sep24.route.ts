@@ -7,7 +7,12 @@ import {
   normalizeAssetCode,
   SUPPORTED_ASSETS,
 } from '../../services/kyc.service';
+import {
+  InteractiveTokenError,
+  validateInteractiveToken,
+} from '../../services/sep24-interactive-token.service';
 import prisma from '../../lib/prisma';
+import logger from '../../utils/logger';
 
 const router = Router();
 
@@ -211,6 +216,56 @@ router.post('/transactions/withdraw/interactive', async (req: Request, res: Resp
   };
 
   return res.json(response);
+});
+
+/**
+ * @swagger
+ * /sep24/interactive/validate:
+ *   get:
+ *     summary: Validate SEP-24 interactive URL token
+ *     description: Validates the short-lived JWT embedded in a SEP-24 interactive URL before starting the hosted flow.
+ *     tags: [SEP-24]
+ *     parameters:
+ *       - in: query
+ *         name: token
+ *         required: true
+ *         schema:
+ *           type: string
+ *         description: JWT token from the interactive URL query string
+ *     responses:
+ *       200:
+ *         description: Token is valid
+ *       401:
+ *         description: Token is invalid or expired
+ */
+router.get('/interactive/validate', (req: Request, res: Response) => {
+  const token = typeof req.query.token === 'string' ? req.query.token : '';
+
+  if (!token) {
+    return res.status(400).json({ error: 'token is required' });
+  }
+
+  try {
+    const claims = validateInteractiveToken(token);
+
+    return res.json({
+      transaction_id: claims.jti,
+      account: claims.sub || undefined,
+      asset_code: claims.data.asset,
+      amount: claims.data.amount,
+      lang: claims.data.lang,
+      flow: claims.data.flow,
+      expires_at: new Date(claims.exp * 1000).toISOString(),
+    });
+  } catch (error) {
+    if (error instanceof InteractiveTokenError) {
+      logger.warn('SEP-24 interactive token rejected', { reason: error.message });
+      return res.status(401).json({ error: error.message });
+    }
+
+    logger.error('SEP-24 interactive token validation failed unexpectedly', { error });
+    return res.status(401).json({ error: 'Invalid token' });
+  }
 });
 
 export default router;
