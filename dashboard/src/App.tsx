@@ -20,6 +20,7 @@ import { RequirementList } from './components/RequirementList';
 const DashboardOverview = lazy(() => import('./components/DashboardOverview'));
 const TransactionHistory = lazy(() => import('./components/TransactionHistory'));
 const SEP24Flow = lazy(() => import('./components/SEP24Flow'));
+const KycStatusView = lazy(() => import('./components/KycStatusView'));
 
 const defaultUiConfig: UiConfig = {
   brandName: 'AnchorPoint',
@@ -261,21 +262,7 @@ const App = () => {
                 {activeTab === 'deposit' && <SEP24Flow type="deposit" uiConfig={uiConfig} />}
                 {activeTab === 'withdraw' && <SEP24Flow type="withdraw" uiConfig={uiConfig} />}
                 {activeTab === 'history' && <TransactionHistory />}
-                {activeTab === 'kyc' && (
-                  <div className="glass-card p-12 text-center">
-                    <ShieldCheck size={64} className="mx-auto mb-4 text-primary" aria-hidden="true" />
-                    <h3 className="text-xl font-bold">Identity Verification</h3>
-                    <p className="mt-2 text-slate-400">
-                      Current KYC requirements are being sourced from the active backend configuration.
-                    </p>
-                    <div className="mx-auto mt-8 max-w-3xl">
-                      <RequirementList
-                        title="Configured KYC Fields"
-                        fields={uiConfig.fieldRequirements.kyc}
-                      />
-                    </div>
-                  </div>
-                )}
+                {activeTab === 'kyc' && <KycStatusView uiConfig={uiConfig} />}
                 {activeTab === 'settings' && (
                   <div className="grid grid-cols-1 gap-6 xl:grid-cols-[0.95fr_1.05fr]">
                     <div className="glass-card p-8">

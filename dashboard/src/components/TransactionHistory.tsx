@@ -17,20 +17,27 @@ interface Transaction {
   reference: string;
 }
 
-const ALL_TRANSACTIONS: Transaction[] = [
-  { id: 'tx-001', type: 'Deposit',    asset: 'USDC', amount: 500.00,    status: 'Completed',  date: '2024-03-15', reference: 'REF-A1B2' },
-  { id: 'tx-002', type: 'Withdrawal', asset: 'USDC', amount: 120.50,    status: 'Pending',     date: '2024-03-16', reference: 'REF-C3D4' },
-  { id: 'tx-003', type: 'Deposit',    asset: 'USDC', amount: 1000.00,   status: 'Processing',  date: '2024-03-16', reference: 'REF-E5F6' },
-  { id: 'tx-004', type: 'Withdrawal', asset: 'EURT', amount: 250.75,    status: 'Completed',   date: '2024-03-17', reference: 'REF-G7H8' },
-  { id: 'tx-005', type: 'Deposit',    asset: 'ARST', amount: 5000.00,   status: 'Failed',      date: '2024-03-17', reference: 'REF-I9J0' },
-  { id: 'tx-006', type: 'Withdrawal', asset: 'USDC', amount: 75.00,     status: 'Cancelled',   date: '2024-03-18', reference: 'REF-K1L2' },
-  { id: 'tx-007', type: 'Deposit',    asset: 'EURT', amount: 3200.00,   status: 'Completed',   date: '2024-03-18', reference: 'REF-M3N4' },
-  { id: 'tx-008', type: 'Withdrawal', asset: 'ARST', amount: 800.00,    status: 'Processing',  date: '2024-03-19', reference: 'REF-O5P6' },
-  { id: 'tx-009', type: 'Deposit',    asset: 'USDC', amount: 10000.00,  status: 'Pending',     date: '2024-03-19', reference: 'REF-Q7R8' },
-  { id: 'tx-010', type: 'Withdrawal', asset: 'USDC', amount: 450.25,    status: 'Completed',   date: '2024-03-20', reference: 'REF-S9T0' },
-  { id: 'tx-011', type: 'Deposit',    asset: 'EURT', amount: 600.00,    status: 'Completed',   date: '2024-03-20', reference: 'REF-U1V2' },
-  { id: 'tx-012', type: 'Withdrawal', asset: 'USDC', amount: 1500.00,   status: 'Failed',      date: '2024-03-21', reference: 'REF-W3X4' },
-];
+const ALL_TRANSACTIONS: Transaction[] = Array.from({ length: 45 }, (_, i) => {
+  const isDeposit = i % 3 === 0;
+  const statusList: TransactionStatus[] = ['Completed', 'Pending', 'Processing', 'Failed', 'Cancelled'];
+  const status = statusList[i % statusList.length];
+  const assets = ['USDC', 'EURT', 'ARST'];
+  const asset = assets[i % assets.length];
+  const amount = 50 + (i * 25.5);
+  // Generate dates going back in time
+  const dateObj = new Date('2024-03-21');
+  dateObj.setDate(dateObj.getDate() - Math.floor(i / 3));
+  
+  return {
+    id: `tx-${String(i + 1).padStart(3, '0')}`,
+    type: isDeposit ? 'Deposit' : 'Withdrawal',
+    asset,
+    amount,
+    status,
+    date: dateObj.toISOString().split('T')[0],
+    reference: `REF-${Math.random().toString(36).substring(2, 6).toUpperCase()}`
+  };
+});
 
 const PAGE_SIZE_OPTIONS = [5, 10, 20] as const;
 
@@ -219,21 +226,46 @@ export const TransactionHistory = () => {
           >
             <ChevronLeft size={16} aria-hidden="true" />
           </button>
-          {Array.from({ length: totalPages }, (_, i) => i + 1).map((p) => (
-            <button
-              key={p}
-              onClick={() => setPage(p)}
-              aria-label={`Page ${p}`}
-              aria-current={p === safePage ? 'page' : undefined}
-              className={`min-w-[2rem] rounded px-2 py-1 text-xs font-medium focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${
-                p === safePage
-                  ? 'bg-primary text-primary-foreground'
-                  : 'hover:bg-slate-800'
-              }`}
-            >
-              {p}
-            </button>
-          ))}
+          {(() => {
+            // Smart pagination window calculation
+            const pages: (number | '...')[] = [];
+            if (totalPages <= 5) {
+              for (let i = 1; i <= totalPages; i++) pages.push(i);
+            } else {
+              if (safePage <= 3) {
+                pages.push(1, 2, 3, 4, '...', totalPages);
+              } else if (safePage >= totalPages - 2) {
+                pages.push(1, '...', totalPages - 3, totalPages - 2, totalPages - 1, totalPages);
+              } else {
+                pages.push(1, '...', safePage - 1, safePage, safePage + 1, '...', totalPages);
+              }
+            }
+
+            return pages.map((p, idx) => {
+              if (p === '...') {
+                return (
+                  <span key={`ellipsis-${idx}`} className="px-2 py-1 text-xs text-slate-500">
+                    ...
+                  </span>
+                );
+              }
+              return (
+                <button
+                  key={`page-${p}`}
+                  onClick={() => setPage(p as number)}
+                  aria-label={`Page ${p}`}
+                  aria-current={p === safePage ? 'page' : undefined}
+                  className={`min-w-[2rem] rounded px-2 py-1 text-xs font-medium transition-colors focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${
+                    p === safePage
+                      ? 'bg-primary text-primary-foreground shadow-sm'
+                      : 'hover:bg-slate-800 text-slate-400 hover:text-slate-200'
+                  }`}
+                >
+                  {p}
+                </button>
+              );
+            });
+          })()}
           <button
             onClick={() => setPage((p) => Math.min(totalPages, p + 1))}
             disabled={safePage === totalPages}
