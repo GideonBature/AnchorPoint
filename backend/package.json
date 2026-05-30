@@ -9,6 +9,7 @@
     "build": "tsc",
     "start": "node dist/index.js",
     "start:worker:recurring-payments": "node dist/workers/recurring-payments.worker.js",
+    "start:worker:key-rotation": "node dist/workers/key-rotation.worker.js",
     "bench": "ts-node -P tsconfig.perf.json perf/bench.ts",
     "bench:sep38": "cross-env BENCH_ONLY=sep38_price_get ts-node -P tsconfig.perf.json perf/bench.ts",
     "bench:sep6:deposit": "cross-env BENCH_ONLY=sep6_deposit ts-node -P tsconfig.perf.json perf/bench.ts",

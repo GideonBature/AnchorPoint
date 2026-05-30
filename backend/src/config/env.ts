@@ -63,6 +63,8 @@ const envSchema = z.object({
   VAULT_TOKEN: z.string().optional(),
   VAULT_TRANSIT_PATH: z.string().optional(),
   SIGNING_KEY: z.string().optional(),
+  ENABLE_KEY_ROTATION_WORKER: z.enum(['true', 'false']).default('false'),
+  KEY_ROTATION_WORKER_CRON: z.string().default('0 0 1 * *'),
   KYC_PROVIDER: z.enum(['mock', 'persona', 'shufti']).default('mock'),
   KYC_WEBHOOK_SECRET: z.string().optional(),
   PERSONA_API_KEY: z.string().optional(),

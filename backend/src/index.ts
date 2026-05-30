@@ -7,6 +7,7 @@ import logger from './utils/logger';
 import transactionsRouter from './api/routes/transactions.route';
 import adminRouter from './api/routes/admin.route';
 import sep24Router from './api/routes/sep24.route';
+import sep12Router from './api/routes/sep12.route';
 import sep6Router from './api/routes/sep6.route';
 import sep38Router from './api/routes/sep38.route';
 import sep40Router from './api/routes/sep40.route';
@@ -39,6 +40,7 @@ const PORT = config.PORT;
 
 app.use(cors());
 app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
 /**
  * @swagger
@@ -139,6 +141,9 @@ app.use('/sep40', sep40Router);
 
 // SEP-1 Info endpoint
 app.use('/info', infoRouter);
+
+// SEP-12 KYC routes
+app.use('/sep12', sep12Router);
 
 // SEP-24 routes
 app.use('/sep24', sep24Router);
