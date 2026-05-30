@@ -90,7 +90,10 @@ const timingSafeMatch = (expected: string, actual: string): boolean => {
 class MockKycProvider implements IKycProvider {
   readonly providerName = 'mock';
 
-  async submitCustomer(data: KycSubmissionInput): Promise<KycSubmissionResult> {
+  async submitCustomer(
+    data: KycSubmissionInput,
+    _documents: Record<string, string> = {}
+  ): Promise<KycSubmissionResult> {
     if (data.email && data.email.includes('reject')) {
       return {
         success: true,

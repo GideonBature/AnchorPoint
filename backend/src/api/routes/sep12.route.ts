@@ -3,6 +3,7 @@ import multer from 'multer';
 import fs from 'fs';
 import path from 'path';
 import { sep12Controller } from '../controllers/sep12.controller';
+import { authMiddleware } from '../middleware/auth.middleware';
 
 const router = Router();
 
@@ -32,7 +33,7 @@ const upload = multer({ storage: storage });
  *     summary: Upload customer information and documents
  *     tags: [SEP-12]
  */
-router.put('/customer', upload.any(), sep12Controller.putCustomer);
+router.put('/customer', authMiddleware, upload.any(), sep12Controller.putCustomer);
 
 /**
  * @swagger
