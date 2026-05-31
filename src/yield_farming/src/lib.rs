@@ -35,8 +35,12 @@ pub enum DataKey {
     LastUpdateLedger,
     /// Global reward-per-share accumulator (scaled by PRECISION).
     RewardPerShareStored,
+    /// Scaled reward remainder carried between updates to avoid losing dust.
+    RewardRemainder,
     /// Per-user snapshot of the accumulator at the time of their last update.
     UserRewardPerSharePaid(Address),
+    /// Per-user scaled reward remainder carried between claims.
+    UserRewardRemainder(Address),
     /// Pending (unclaimed) rewards for a user.
     Rewards(Address),
 }
@@ -77,6 +81,9 @@ impl YieldFarmingDistributor {
         env.storage()
             .instance()
             .set(&DataKey::RewardPerShareStored, &0i128);
+        env.storage()
+            .instance()
+            .set(&DataKey::RewardRemainder, &0i128);
     }
 
     /// Update the per-ledger reward rate (admin only).
@@ -141,16 +148,7 @@ impl YieldFarmingDistributor {
     pub fn pending_rewards(env: Env, user: Address) -> i128 {
         let amm_pool: Address = env.storage().instance().get(&DataKey::AmmPool).unwrap();
 
-        let total_shares: i128 = env.invoke_contract(
-            &amm_pool,
-            &soroban_sdk::Symbol::new(&env, "get_total_shares"),
-            soroban_sdk::vec![&env],
-        );
-        let user_shares: i128 = env.invoke_contract(
-            &amm_pool,
-            &soroban_sdk::Symbol::new(&env, "get_shares"),
-            soroban_sdk::vec![&env, user.to_val()],
-        );
+        let (total_shares, user_shares) = Self::_read_validated_shares(&env, &amm_pool, &user);
 
         let last_update: u32 = env
             .storage()
@@ -173,12 +171,20 @@ impl YieldFarmingDistributor {
 
         if current_ledger > last_update && total_shares > 0 {
             let ledgers_elapsed = (current_ledger - last_update) as i128;
-            let delta = ledgers_elapsed
+            let reward_delta = ledgers_elapsed
                 .checked_mul(reward_rate)
                 .expect("reward overflow")
                 .checked_mul(PRECISION)
-                .expect("reward overflow")
-                / total_shares;
+                .expect("reward overflow");
+            let remainder: i128 = env
+                .storage()
+                .instance()
+                .get(&DataKey::RewardRemainder)
+                .unwrap_or(0);
+            let distributable = reward_delta
+                .checked_add(remainder)
+                .expect("reward overflow");
+            let delta = distributable / total_shares;
             reward_per_share = reward_per_share
                 .checked_add(delta)
                 .expect("reward overflow");
@@ -194,14 +200,21 @@ impl YieldFarmingDistributor {
             .persistent()
             .get(&DataKey::Rewards(user.clone()))
             .unwrap_or(0);
+        let user_remainder: i128 = env
+            .storage()
+            .persistent()
+            .get(&DataKey::UserRewardRemainder(user.clone()))
+            .unwrap_or(0);
 
         // Guard against user_paid being stale / greater than current accumulator.
         let delta_per_share = reward_per_share.saturating_sub(user_paid);
 
-        let new_rewards = user_shares
+        let reward_numerator = user_shares
             .checked_mul(delta_per_share)
             .expect("reward overflow")
-            / PRECISION;
+            .checked_add(user_remainder)
+            .expect("reward overflow");
+        let new_rewards = reward_numerator / PRECISION;
 
         rewards_accrued
             .checked_add(new_rewards)
@@ -229,6 +242,7 @@ impl YieldFarmingDistributor {
             &soroban_sdk::Symbol::new(env, "get_total_shares"),
             soroban_sdk::vec![env],
         );
+        assert!(total_shares >= 0, "invalid total shares");
 
         if total_shares > 0 {
             let reward_rate: i128 = env
@@ -237,12 +251,21 @@ impl YieldFarmingDistributor {
                 .get(&DataKey::RewardRate)
                 .unwrap_or(0);
             let ledgers_elapsed = (current_ledger - last_update) as i128;
-            let delta = ledgers_elapsed
+            let reward_delta = ledgers_elapsed
                 .checked_mul(reward_rate)
                 .expect("reward overflow")
                 .checked_mul(PRECISION)
-                .expect("reward overflow")
-                / total_shares;
+                .expect("reward overflow");
+            let remainder: i128 = env
+                .storage()
+                .instance()
+                .get(&DataKey::RewardRemainder)
+                .unwrap_or(0);
+            let distributable = reward_delta
+                .checked_add(remainder)
+                .expect("reward overflow");
+            let delta = distributable / total_shares;
+            let next_remainder = distributable % total_shares;
 
             let stored: i128 = env
                 .storage()
@@ -253,6 +276,9 @@ impl YieldFarmingDistributor {
                 &DataKey::RewardPerShareStored,
                 &stored.checked_add(delta).expect("reward overflow"),
             );
+            env.storage()
+                .instance()
+                .set(&DataKey::RewardRemainder, &next_remainder);
         }
 
         env.storage()
@@ -277,18 +303,22 @@ impl YieldFarmingDistributor {
             .unwrap_or(0);
 
         let amm_pool: Address = env.storage().instance().get(&DataKey::AmmPool).unwrap();
-        let user_shares: i128 = env.invoke_contract(
-            &amm_pool,
-            &soroban_sdk::Symbol::new(env, "get_shares"),
-            soroban_sdk::vec![env, user.to_val()],
-        );
+        let (_total_shares, user_shares) = Self::_read_validated_shares(env, &amm_pool, user);
 
         // Guard against stale snapshots.
         let delta_per_share = stored.saturating_sub(user_paid);
-        let earned = user_shares
+        let user_remainder: i128 = env
+            .storage()
+            .persistent()
+            .get(&DataKey::UserRewardRemainder(user.clone()))
+            .unwrap_or(0);
+        let reward_numerator = user_shares
             .checked_mul(delta_per_share)
             .expect("reward overflow")
-            / PRECISION;
+            .checked_add(user_remainder)
+            .expect("reward overflow");
+        let earned = reward_numerator / PRECISION;
+        let next_user_remainder = reward_numerator % PRECISION;
 
         if earned > 0 {
             let prev: i128 = env
@@ -302,10 +332,38 @@ impl YieldFarmingDistributor {
             );
         }
 
+        env.storage().persistent().set(
+            &DataKey::UserRewardRemainder(user.clone()),
+            &next_user_remainder,
+        );
+
         // Always update the snapshot so the user doesn't re-earn the same rewards.
         env.storage()
             .persistent()
             .set(&DataKey::UserRewardPerSharePaid(user.clone()), &stored);
+    }
+
+    /// Read AMM share data and reject impossible states before reward math.
+    fn _read_validated_shares(env: &Env, amm_pool: &Address, user: &Address) -> (i128, i128) {
+        let total_shares: i128 = env.invoke_contract(
+            amm_pool,
+            &soroban_sdk::Symbol::new(env, "get_total_shares"),
+            soroban_sdk::vec![env],
+        );
+        let user_shares: i128 = env.invoke_contract(
+            amm_pool,
+            &soroban_sdk::Symbol::new(env, "get_shares"),
+            soroban_sdk::vec![env, user.to_val()],
+        );
+
+        assert!(total_shares >= 0, "invalid total shares");
+        assert!(user_shares >= 0, "invalid user shares");
+        assert!(
+            user_shares <= total_shares,
+            "user shares exceed total shares"
+        );
+
+        (total_shares, user_shares)
     }
 }
 
@@ -386,9 +444,9 @@ mod tests {
         env: &Env,
         reward_rate: i128,
     ) -> (
-        YieldFarmingDistributorClient,
-        MockAmmPoolClient,
-        MockTokenClient,
+        YieldFarmingDistributorClient<'_>,
+        MockAmmPoolClient<'_>,
+        MockTokenClient<'_>,
         Address, // distributor contract address
         Address, // admin
     ) {
@@ -562,5 +620,52 @@ mod tests {
 
         assert_eq!(dist.pending_rewards(&user), 0);
         assert_eq!(dist.claim_rewards(&user), 0);
+    }
+
+    #[test]
+    fn test_fractional_reward_dust_is_carried_forward() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let (dist, amm, _token, _dist_id, _admin) = setup(&env, 1);
+
+        let user = Address::generate(&env);
+        amm.set_total_shares(&3);
+        amm.set_shares(&user, &1);
+
+        env.ledger().with_mut(|l| l.sequence_number += 1);
+        assert_eq!(dist.claim_rewards(&user), 0);
+
+        env.ledger().with_mut(|l| l.sequence_number += 2);
+        assert_eq!(dist.pending_rewards(&user), 1);
+    }
+
+    #[test]
+    #[should_panic(expected = "invalid total shares")]
+    fn test_negative_total_shares_rejected() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let (dist, amm, _token, _dist_id, _admin) = setup(&env, 1_000);
+
+        let user = Address::generate(&env);
+        amm.set_total_shares(&-1);
+        amm.set_shares(&user, &0);
+
+        env.ledger().with_mut(|l| l.sequence_number += 1);
+        let _ = dist.pending_rewards(&user);
+    }
+
+    #[test]
+    #[should_panic(expected = "user shares exceed total shares")]
+    fn test_user_shares_cannot_exceed_total_shares() {
+        let env = Env::default();
+        env.mock_all_auths();
+        let (dist, amm, _token, _dist_id, _admin) = setup(&env, 1_000);
+
+        let user = Address::generate(&env);
+        amm.set_total_shares(&10);
+        amm.set_shares(&user, &11);
+
+        env.ledger().with_mut(|l| l.sequence_number += 1);
+        let _ = dist.claim_rewards(&user);
     }
 }
