@@ -85,17 +85,25 @@ function simulateMigration() {
         SHADOW_DATABASE_URL: '',
     };
 
-    console.log('Cleaning shadow database...');
+    console.log('Resetting shadow database before simulation...');
     if (SHADOW_DB_URL.startsWith('file:')) {
         const dbPath = path.join(__dirname, '../prisma', SHADOW_DB_URL.replace('file:', ''));
         if (fs.existsSync(dbPath)) fs.unlinkSync(dbPath);
+    } else {
+        // For PostgreSQL: reset using migrate reset --force so any existing
+        // schema is dropped before re-applying all migrations from scratch.
+        try {
+            execSync(`${PRISMA_BINARY} migrate reset --force`, { stdio: 'inherit', env });
+        } catch (_) {
+            // reset can fail if DB is truly empty — that's fine, continue.
+        }
     }
 
     console.log('Applying migrations to shadow database...');
     // Use migrate deploy instead of migrate dev to apply existing migrations without creating new ones
     run(`${PRISMA_BINARY} migrate deploy`, { env });
 
-    console.log('\u2705 Migration simulation successful.');
+    console.log('✅ Migration simulation successful.');
 }
 
 function checkDrift() {
