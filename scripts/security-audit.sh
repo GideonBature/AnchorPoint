@@ -169,7 +169,9 @@ main() {
   log "Starting Soroban security audit..."
 
   if [[ "$SKIP_BUILD" -eq 0 ]]; then
-    build_workspace_wasm "$ROOT_DIR" "root workspace" "$ROOT_WASM_TARGET" || true
+    # Skip root workspace build: src/ uses soroban-sdk v26 which is incompatible
+    # with cargo-scout-audit@0.3.x (testutils feature not supported on wasm target).
+    # Only build the contracts/ workspace which uses stable soroban-sdk v22.
     build_workspace_wasm "$ROOT_DIR/contracts" "contracts workspace" "$CONTRACTS_WASM_TARGET" || true
   else
     log "Skipping Wasm build (--skip-build)."

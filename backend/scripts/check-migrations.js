@@ -74,12 +74,17 @@ function checkDestructiveChanges() {
 
 function simulateMigration() {
     console.log('--- Simulating migrations on shadow database ---');
-    // 1. Reset shadow DB
-    // 2. Apply all migrations
-    // 3. Check if schema matches schema.prisma
-    
-    const env = { DATABASE_URL: SHADOW_DB_URL };
-    
+    // Apply all migrations to the SHADOW database by overriding DATABASE_URL.
+    // We must NOT pass SHADOW_DATABASE_URL here – when Prisma sees both vars it
+    // cross-checks them and errors if they resolve to the same logical DB.
+    const env = {
+        ...process.env,
+        DATABASE_URL: SHADOW_DB_URL,
+        // Suppress the schema-level shadowDatabaseUrl so Prisma treats
+        // DATABASE_URL as the primary (and only) target for this run.
+        SHADOW_DATABASE_URL: '',
+    };
+
     console.log('Cleaning shadow database...');
     if (SHADOW_DB_URL.startsWith('file:')) {
         const dbPath = path.join(__dirname, '../prisma', SHADOW_DB_URL.replace('file:', ''));
@@ -89,8 +94,8 @@ function simulateMigration() {
     console.log('Applying migrations to shadow database...');
     // Use migrate deploy instead of migrate dev to apply existing migrations without creating new ones
     run(`${PRISMA_BINARY} migrate deploy`, { env });
-    
-    console.log('✅ Migration simulation successful.');
+
+    console.log('\u2705 Migration simulation successful.');
 }
 
 function checkDrift() {
