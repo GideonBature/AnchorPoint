@@ -89,6 +89,7 @@ jobs:
       - name: Verify Migrations Against Temporary Database
         env:
           DATABASE_URL: "postgresql://prisma:prisma_password@localhost:5432/cidb"
+          SHADOW_DATABASE_URL: "postgresql://prisma:prisma_password@localhost:5433/shadowdb"
         run: npm run migrate:verify
 
       - name: Run Migration Integrity Checker
