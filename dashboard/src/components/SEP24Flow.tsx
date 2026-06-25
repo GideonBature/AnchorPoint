@@ -124,7 +124,7 @@ export const SEP24Flow = ({ type, uiConfig }: { type: 'deposit' | 'withdraw'; ui
                     role="listitem"
                     onClick={() => goToStep(isWithdraw ? 2 : 3)}
                     aria-label={`Select ${asset} for ${flowLabel.toLowerCase()}`}
-                    className="flex items-center justify-between rounded-xl border border-slate-700 bg-slate-900 p-4 transition-all hover:border-primary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                    className="action-button flex items-center justify-between rounded-xl border border-slate-700 bg-slate-900 p-4 hover:border-primary/50 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
                   >
                     <div className="flex items-center gap-3">
                       <div

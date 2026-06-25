@@ -119,7 +119,7 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
     <div className="relative" ref={dropdownRef}>
       <button
         onClick={() => setIsOpen(!isOpen)}
-        className="relative rounded-lg border border-slate-700 bg-slate-900 p-2 transition-all hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+        className="action-button relative rounded-lg border border-slate-700 bg-slate-900 p-2 hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
         aria-label={`Notifications ${unreadCount > 0 ? `(${unreadCount} unread)` : ''}`}
         aria-expanded={isOpen}
       >
@@ -196,7 +196,7 @@ export const NotificationBell: React.FC<NotificationBellProps> = ({
                     setIsOpen(false);
                     onViewAll?.();
                   }}
-                  className="w-full rounded-lg bg-slate-800 py-2 text-sm font-medium text-slate-200 transition-colors hover:bg-slate-700"
+                  className="action-button w-full rounded-lg bg-slate-800 py-2 text-sm font-medium text-slate-200 hover:bg-slate-700"
                 >
                   View All Notifications
                 </button>

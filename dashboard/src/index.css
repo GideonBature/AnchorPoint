@@ -25,7 +25,11 @@
   }
   
   .btn-primary {
-    @apply bg-primary text-primary-foreground px-4 py-2 rounded-lg font-medium transition-all hover:opacity-90 active:scale-95;
+    @apply transform-gpu bg-primary text-primary-foreground px-4 py-2 rounded-lg font-medium transition-all duration-200 ease-out hover:scale-[1.02] hover:opacity-90 active:scale-[0.98] disabled:hover:scale-100 disabled:active:scale-100;
+  }
+
+  .action-button {
+    @apply transform-gpu transition-all duration-200 ease-out hover:scale-[1.02] active:scale-[0.98] disabled:hover:scale-100 disabled:active:scale-100 disabled:cursor-not-allowed;
   }
   
   .input-field {

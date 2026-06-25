@@ -123,14 +123,14 @@ export const KycStatusView = ({ uiConfig }: { uiConfig: UiConfig }) => {
             <div className="mt-10 flex flex-col sm:flex-row gap-4 w-full max-w-lg justify-center">
               <button 
                 onClick={() => setKycState('not_started')}
-                className="flex flex-1 sm:flex-none items-center justify-center gap-2 rounded-lg bg-rose-600 hover:bg-rose-500 px-8 py-3 text-sm font-medium text-white shadow-lg shadow-rose-500/20 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/50"
+                className="action-button flex flex-1 sm:flex-none items-center justify-center gap-2 rounded-lg bg-rose-600 hover:bg-rose-500 px-8 py-3 text-sm font-medium text-white shadow-lg shadow-rose-500/20 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-rose-500/50"
               >
                 <RefreshCw size={16} aria-hidden="true" />
                 Resubmit KYC
               </button>
               <a 
                 href={`mailto:${uiConfig.supportEmail || 'support@example.com'}`}
-                className="flex flex-1 sm:flex-none items-center justify-center gap-2 rounded-lg border border-slate-700 bg-slate-800/80 hover:bg-slate-700 px-8 py-3 text-sm font-medium text-slate-300 transition-all focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500/50"
+                className="action-button flex flex-1 sm:flex-none items-center justify-center gap-2 rounded-lg border border-slate-700 bg-slate-800/80 hover:bg-slate-700 px-8 py-3 text-sm font-medium text-slate-300 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-slate-500/50"
               >
                 <Mail size={16} aria-hidden="true" />
                 Contact Support

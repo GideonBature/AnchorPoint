@@ -226,7 +226,7 @@ const App = () => {
               apiBaseUrl={apiBaseUrl}
               onViewAll={() => setActiveTab('notifications')}
             />
-            <button className="flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-900 px-4 py-2 transition-all hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50">
+            <button className="action-button flex items-center gap-2 rounded-lg border border-slate-700 bg-slate-900 px-4 py-2 hover:bg-slate-800 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary/50">
               <Wallet size={18} aria-hidden="true" />
               <span className="text-sm font-medium">Connect Wallet</span>
             </button>
