@@ -11,11 +11,12 @@ import {
   Wallet,
   AlertCircle,
   Bell,
+  RefreshCcw,
+  Activity,
 } from 'lucide-react';
 import { motion, AnimatePresence } from 'framer-motion';
 import type { UiConfig } from './types';
 import { LogoMark } from './components/LogoMark';
-import { RequirementList } from './components/RequirementList';
 import { NotificationBell } from './components/NotificationBell';
 
 // Lazy-load heavy tab views so they are only fetched when first visited
@@ -26,6 +27,9 @@ const KycStatusView = lazy(() => import('./components/KycStatusView'));
 const NotificationCenter = lazy(() => import('./components/NotificationCenter'));
 const NotificationPreferences = lazy(() => import('./components/NotificationPreferences'));
 const AdminControls = lazy(() => import('./components/AdminControls'));
+const Sep38QuotePanel = lazy(() => import('./components/Sep38QuotePanel'));
+const ServiceStatusPanel = lazy(() => import('./components/ServiceStatusPanel'));
+const SettingsView = lazy(() => import('./components/SettingsView'));
 
 const defaultUiConfig: UiConfig = {
   brandName: 'AnchorPoint',
@@ -113,6 +117,8 @@ const App = () => {
       { id: 'deposit', icon: ArrowDownLeft, label: 'Deposit' },
       { id: 'withdraw', icon: ArrowUpRight, label: 'Withdraw' },
       { id: 'history', icon: History, label: 'History' },
+      { id: 'sep38', icon: RefreshCcw, label: 'SEP-38 Quote' },
+      { id: 'status', icon: Activity, label: 'Service Status' },
       { id: 'notifications', icon: Bell, label: 'Notifications' },
       { id: 'kyc', icon: ShieldCheck, label: 'KYC Status' },
       { id: 'settings', icon: Settings, label: 'Settings' },
@@ -248,6 +254,8 @@ const App = () => {
                 {activeTab === 'deposit' && 'Initiate a new on-ramp transaction via SEP-24.'}
                 {activeTab === 'withdraw' && 'Initiate a new off-ramp transaction via SEP-24.'}
                 {activeTab === 'history' && 'Track historical and pending transactions.'}
+                {activeTab === 'sep38' && 'Request fixed or indicative cross-border conversion quotes.'}
+                {activeTab === 'status' && 'Monitor Redis, database, and infrastructure health in real time.'}
                 {activeTab === 'notifications' && 'View webhook events and transaction notifications.'}
                 {activeTab === 'kyc' && 'Check your KYC verification status.'}
                 {activeTab === 'settings' &&
@@ -280,6 +288,8 @@ const App = () => {
                 {activeTab === 'deposit' && <SEP24Flow type="deposit" uiConfig={uiConfig} />}
                 {activeTab === 'withdraw' && <SEP24Flow type="withdraw" uiConfig={uiConfig} />}
                 {activeTab === 'history' && <TransactionHistory />}
+                {activeTab === 'sep38' && <Sep38QuotePanel />}
+                {activeTab === 'status' && <ServiceStatusPanel />}
                 {activeTab === 'notifications' && (
                   <NotificationCenter
                     apiBaseUrl={apiBaseUrl}
@@ -291,99 +301,7 @@ const App = () => {
                 )}
                 {activeTab === 'kyc' && <KycStatusView uiConfig={uiConfig} />}
                 {activeTab === 'settings' && (
-                  <div className="grid grid-cols-1 gap-6 xl:grid-cols-[0.95fr_1.05fr]">
-                    <div className="space-y-6">
-                      <div className="glass-card p-8">
-                        <h3 className="mb-4 text-xl font-bold">Branding Configuration</h3>
-                        <div className="space-y-6">
-                          <div>
-                            <label htmlFor="brand-name" className="mb-2 block text-sm font-medium text-slate-400">
-                              Brand Name
-                            </label>
-                            <input
-                              id="brand-name"
-                              type="text"
-                              value={uiConfig.brandName}
-                              readOnly
-                              aria-readonly="true"
-                              className="input-field w-full"
-                            />
-                          </div>
-                          <div>
-                            <label htmlFor="logo-url" className="mb-2 block text-sm font-medium text-slate-400">
-                              Logo URL
-                            </label>
-                            <input
-                              id="logo-url"
-                              type="text"
-                              value={uiConfig.logoUrl ?? 'Not configured'}
-                              readOnly
-                              aria-readonly="true"
-                              className="input-field w-full"
-                            />
-                          </div>
-                          <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
-                            <div>
-                              <label htmlFor="primary-color-hex" className="mb-2 block text-sm font-medium text-slate-400">
-                                Primary Color
-                              </label>
-                              <div className="flex gap-2">
-                                <input
-                                  type="color"
-                                  value={uiConfig.primaryColor}
-                                  readOnly
-                                  aria-label={`Primary color preview: ${uiConfig.primaryColor}`}
-                                  className="h-10 w-10 cursor-default border-0 bg-transparent"
-                                />
-                                <input
-                                  id="primary-color-hex"
-                                  type="text"
-                                  value={uiConfig.primaryColor}
-                                  readOnly
-                                  aria-readonly="true"
-                                  className="input-field flex-1"
-                                />
-                              </div>
-                            </div>
-                            <div>
-                              <label htmlFor="accent-color-hex" className="mb-2 block text-sm font-medium text-slate-400">
-                                Accent Color
-                              </label>
-                              <div className="flex gap-2">
-                                <input
-                                  type="color"
-                                  value={uiConfig.accentColor}
-                                  readOnly
-                                  aria-label={`Accent color preview: ${uiConfig.accentColor}`}
-                                  className="h-10 w-10 cursor-default border-0 bg-transparent"
-                                />
-                                <input
-                                  id="accent-color-hex"
-                                  type="text"
-                                  value={uiConfig.accentColor}
-                                  readOnly
-                                  aria-readonly="true"
-                                  className="input-field flex-1"
-                                />
-                              </div>
-                            </div>
-                          </div>
-                        </div>
-                      </div>
-                      <AdminControls apiBaseUrl={apiBaseUrl} />
-                    </div>
-
-                    <div className="grid grid-cols-1 gap-6">
-                      <RequirementList
-                        title="Deposit Fields"
-                        fields={uiConfig.fieldRequirements.deposit}
-                      />
-                      <RequirementList
-                        title="Withdrawal Fields"
-                        fields={uiConfig.fieldRequirements.withdraw}
-                      />
-                    </div>
-                  </div>
+                  <SettingsView uiConfig={uiConfig} apiBaseUrl={apiBaseUrl} />
                 )}
               </Suspense>
             </motion.div>
