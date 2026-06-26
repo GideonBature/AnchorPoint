@@ -95,10 +95,10 @@ describe('SEP-38 Price Quotes API', () => {
     });
   });
 
-  describe('POST /sep38/price', () => {
+  describe('POST /sep38/quote', () => {
     it('should return price quote for valid POST request', async () => {
       const response = await request(app)
-        .post('/sep38/price')
+        .post('/sep38/quote')
         .send({
           source_asset: 'USDC',
           source_amount: 100,
@@ -112,7 +112,7 @@ describe('SEP-38 Price Quotes API', () => {
 
     it('should return error for missing body parameters', async () => {
       const response = await request(app)
-        .post('/sep38/price')
+        .post('/sep38/quote')
         .send({
           source_asset: 'USDC',
         });

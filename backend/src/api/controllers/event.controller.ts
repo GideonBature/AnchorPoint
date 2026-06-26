@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { eventIndexer } from '../../services/event-indexer.service';
-import { logger } from '../../utils/logger';
+import logger from '../../utils/logger';
 
 /**
  * Controller for Soroban Contract Events
@@ -24,7 +24,7 @@ export class EventController {
             return res.json({
                 success: true,
                 count: events.length,
-                data: events.map(e => ({
+                data: events.map((e: any) => ({
                     ...e,
                     topics: JSON.parse(e.topics),
                     value: JSON.parse(e.value)

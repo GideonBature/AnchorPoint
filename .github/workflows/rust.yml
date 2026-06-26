@@ -15,7 +15,14 @@ jobs:
         with:
           targets: wasm32-unknown-unknown
       - uses: Swatinem/rust-cache@v2
+      - uses: taiki-e/install-action@v2
+        with:
+          tool: cargo-scout-audit@0.3.16
+      - name: Install Scout system dependencies
+        run: sudo apt-get update && sudo apt-get install -y libssl-dev pkg-config gcc
       - name: Test sep41-token
         run: cargo test -p sep41-token
       - name: Test upgradeable
         run: cargo test -p upgradeable
+      - name: Run Security Audit
+        run: ./scripts/security-audit.sh

@@ -2,6 +2,8 @@ import { Router, Request, Response } from 'express';
 import { z } from 'zod';
 import { stellarService } from '../../services/stellar.service';
 import { NetworkType } from '../../config/networks';
+import { SEP31Service } from '../../services/sep31.service';
+import { createCallbackNotifier } from '../../services/sep31CallbackNotifier';
 import logger from '../../utils/logger';
 import {
   AdminPasswordResetService,
@@ -25,6 +27,9 @@ const passwordResetConfirmSchema = z.object({
     .regex(/[A-Z]/, 'Password must include an uppercase letter')
     .regex(/[0-9]/, 'Password must include a number'),
 });
+
+// Singleton service instance
+const sep31Service = new SEP31Service(createCallbackNotifier());
 
 /**
  * @swagger
@@ -84,6 +89,58 @@ router.post('/network', (req: Request, res: Response) => {
     logger.info(`Switched to Stellar network: ${network}`);
     res.json({ message: `Switched to ${network} successfully`, network });
   } catch (error: any) {
+    res.status(500).json({ error: error.message });
+  }
+});
+
+/**
+ * @swagger
+ * /api/admin/transactions/{id}:
+ *   patch:
+ *     summary: Update transaction status
+ *     tags: [Admin]
+ *     parameters:
+ *       - in: path
+ *         name: id
+ *         required: true
+ *         schema:
+ *           type: string
+ *     requestBody:
+ *       required: true
+ *       content:
+ *         application/json:
+ *           schema:
+ *             type: object
+ *             properties:
+ *               status:
+ *                 type: string
+ *                 enum: [pending_sender, pending_stellar, pending_info_update, pending_receiver, pending_external, completed, error, refunded]
+ *               stellar_transaction_id:
+ *                 type: string
+ *               external_transaction_id:
+ *                 type: string
+ *               amount_out:
+ *                 type: string
+ *               amount_fee:
+ *                 type: string
+ *     responses:
+ *       200:
+ *         description: Transaction status updated successfully
+ */
+router.patch('/transactions/:id', async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { status, stellar_transaction_id, external_transaction_id, amount_out, amount_fee } = req.body;
+
+    const updatedTransaction = await sep31Service.updateStatus(id, status, undefined, {
+      stellarTxId: stellar_transaction_id,
+      externalId: external_transaction_id,
+      feeAmount: amount_fee,
+    });
+
+    res.json({ message: 'Transaction status updated successfully', transaction: updatedTransaction });
+  } catch (error: any) {
+    logger.error('Error updating transaction status', { error: error.message });
     res.status(500).json({ error: error.message });
   }
 });
@@ -199,6 +256,84 @@ router.post('/password-reset/confirm', async (req: Request, res: Response) => {
     return res.status(500).json({
       status: 'error',
       message: 'Unable to reset password.',
+    });
+  }
+});
+
+const adminTransactionsQuerySchema = z.object({
+  page: z.string().optional().transform(v => parseInt(v || '1', 10)).pipe(z.number().min(1)),
+  limit: z.string().optional().transform(v => parseInt(v || '10', 10)).pipe(z.number().min(1).max(100)),
+});
+
+/**
+ * @swagger
+ * /admin/transactions:
+ *   get:
+ *     summary: Get all transactions with pagination (Admin only)
+ *     tags: [Admin]
+ *     parameters:
+ *       - in: query
+ *         name: page
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           default: 1
+ *         description: Page number
+ *       - in: query
+ *         name: limit
+ *         schema:
+ *           type: integer
+ *           minimum: 1
+ *           maximum: 100
+ *           default: 10
+ *         description: Items per page
+ *     responses:
+ *       200:
+ *         description: A paginated list of transactions
+ *       400:
+ *         description: Invalid query parameters
+ *       500:
+ *         description: Internal server error
+ */
+router.get('/transactions', async (req: Request, res: Response) => {
+  const parsed = adminTransactionsQuerySchema.safeParse(req.query);
+  if (!parsed.success) {
+    return res.status(400).json({
+      status: 'error',
+      message: parsed.error.issues[0]?.message ?? 'Invalid query parameters',
+    });
+  }
+
+  const { page, limit } = parsed.data;
+  const skip = (page - 1) * limit;
+
+  try {
+    const [transactions, total] = await Promise.all([
+      import('../../lib/prisma').then(m => m.default.transaction.findMany({
+        orderBy: { createdAt: 'desc' },
+        take: limit,
+        skip,
+      })),
+      import('../../lib/prisma').then(m => m.default.transaction.count()),
+    ]);
+
+    return res.json({
+      status: 'success',
+      data: {
+        transactions,
+        pagination: {
+          total,
+          page,
+          limit,
+          totalPages: Math.ceil(total / limit),
+        },
+      },
+    });
+  } catch (error: any) {
+    logger.error('Failed to fetch admin transactions', { message: error?.message });
+    return res.status(500).json({
+      status: 'error',
+      message: 'Unable to fetch transactions',
     });
   }
 });

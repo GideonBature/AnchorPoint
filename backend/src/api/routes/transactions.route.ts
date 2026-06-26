@@ -1,6 +1,7 @@
 import { Router, Response } from 'express';
 import { z } from 'zod';
 import prisma from '../../lib/prisma';
+import { Prisma } from '@prisma/client';
 import { authMiddleware, AuthRequest } from '../middleware/auth.middleware';
 import { validate } from '../middleware/validate.middleware';
 import { stellarService } from '../../services/stellar.service';
@@ -120,33 +121,28 @@ router.get('/', authMiddleware, validate({ query: querySchema }), async (req: Au
       return res.status(404).json({ status: 'error', message: 'User not found' });
     }
 
-    const eventSearchClauses: string[] = [];
-    const eventQueryParams: string[] = [];
+    const eventSearchClauses: Prisma.Sql[] = [];
 
     if (sender) {
       const senderPattern = `%${sender}%`;
-      eventSearchClauses.push('(topics LIKE ? OR value LIKE ?)');
-      eventQueryParams.push(senderPattern, senderPattern);
+      eventSearchClauses.push(Prisma.sql`(topics LIKE ${senderPattern} OR value LIKE ${senderPattern})`);
     }
 
     if (receiver) {
       const receiverPattern = `%${receiver}%`;
-      eventSearchClauses.push('(topics LIKE ? OR value LIKE ?)');
-      eventQueryParams.push(receiverPattern, receiverPattern);
+      eventSearchClauses.push(Prisma.sql`(topics LIKE ${receiverPattern} OR value LIKE ${receiverPattern})`);
     }
 
     if (memo) {
       const memoPattern = `%${memo}%`;
-      eventSearchClauses.push('(topics LIKE ? OR value LIKE ?)');
-      eventQueryParams.push(memoPattern, memoPattern);
+      eventSearchClauses.push(Prisma.sql`(topics LIKE ${memoPattern} OR value LIKE ${memoPattern})`);
     }
 
     let matchingTxHashes: string[] | undefined;
 
     if (eventSearchClauses.length > 0) {
       const eventRows = await prisma.$queryRaw<Array<{ txHash: string }>>(
-        `SELECT DISTINCT txHash FROM "ContractEvent" WHERE ${eventSearchClauses.join(' AND ')}`,
-        ...eventQueryParams,
+        Prisma.sql`SELECT DISTINCT txHash FROM "ContractEvent" WHERE ${Prisma.join(eventSearchClauses, ' AND ')}`
       );
 
       matchingTxHashes = eventRows.map((row: { txHash: string }) => row.txHash).filter(Boolean);
