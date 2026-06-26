@@ -15,6 +15,7 @@ import type { TransactionStatus } from './TransactionStatusBadge';
 type TransactionType = 'Deposit' | 'Withdrawal';
 type SortKey = 'type' | 'asset' | 'amount' | 'status' | 'date';
 type SortDir = 'asc' | 'desc';
+type ColumnAlign = 'left' | 'right';
 
 interface Transaction {
   id: string;
@@ -124,6 +125,12 @@ export const TransactionHistory = () => {
     { key: 'amount', label: 'Amount' },
     { key: 'status', label: 'Status' },
     { key: 'date', label: 'Date' },
+  const HEADERS: { key: SortKey; label: string; align: ColumnAlign }[] = [
+    { key: 'type', label: 'Type', align: 'left' },
+    { key: 'asset', label: 'Asset', align: 'left' },
+    { key: 'amount', label: 'Amount', align: 'right' },
+    { key: 'status', label: 'Status', align: 'left' },
+    { key: 'date', label: 'Date', align: 'left' },
   ];
 
   const statusOptions: Array<TransactionStatus | 'All'> = ['All', 'Completed', 'Pending', 'Processing', 'Failed', 'Cancelled'];
@@ -223,11 +230,18 @@ export const TransactionHistory = () => {
           </caption>
           <thead>
             <tr className="border-b border-slate-600 text-sm text-slate-400">
-              {HEADERS.map(({ key, label }) => (
-                <th key={key} scope="col" className="p-4 font-medium">
+              {HEADERS.map(({ key, label, align }) => (
+                <th
+                  key={key}
+                  scope="col"
+                  className={`p-4 font-medium ${align === 'right' ? 'text-right' : 'text-left'}`}
+                >
                   <button
                     onClick={() => handleSort(key)}
                     className="rounded focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-text inline-flex items-center gap-1 hover:text-slate-200"
+                    className={`inline-flex items-center gap-1 rounded hover:text-slate-200 focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-primary-text ${
+                      align === 'right' ? 'justify-end' : 'justify-start'
+                    }`}
                     aria-label={`Sort by ${label}${sortKey === key ? `, currently ${sortDir}ending` : ''}`}
                   >
                     {label}
@@ -282,7 +296,7 @@ export const TransactionHistory = () => {
                     {tx.type}
                   </td>
                   <td className="p-4">{tx.asset}</td>
-                  <td className="p-4 font-mono">${fmtAmount(tx.amount)}</td>
+                  <td className="p-4 text-right font-mono">${fmtAmount(tx.amount)}</td>
                   <td className="p-4">
                     <TransactionStatusBadge status={tx.status} />
                   </td>
