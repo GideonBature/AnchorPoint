@@ -9,8 +9,11 @@ import {
 } from '../../services/kyc.service';
 import prisma from '../../lib/prisma';
 import { isValidStellarPublicKey } from '../../utils/stellar-address';
+import { sep24MetricsMiddleware } from '../middleware/sep24-metrics.middleware';
 
 const router = Router();
+
+router.use(sep24MetricsMiddleware);
 
 interface InteractiveRequest {
   asset_code: string;
