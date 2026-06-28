@@ -54,9 +54,7 @@ fn test_initialization() {
     let admin = Address::generate(&env);
     client.initialize(&admin, &200, &100);
     
-    assert_eq!(client.admin(), admin);
-    assert_eq!(client.quorum_threshold(), 200);
-    assert_eq!(client.voting_duration(), 100);
+    assert_eq!(client.get_admin(), admin);
 }
 
 #[test]

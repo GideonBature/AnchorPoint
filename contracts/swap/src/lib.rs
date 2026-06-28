@@ -1022,7 +1022,7 @@ mod tests {
 
         // Verify referrer was set
         let referrer = client.get_referrer(&alice);
-        assert_eq!(referrer, Some(bob));
+        assert_eq!(referrer, Some(bob.clone()));
 
         // Add liquidity
         client.mint(&alice, &-60, &60, &10_000, &10_000);
