@@ -36,6 +36,10 @@ pub struct Proposal {
 #[derive(Clone)]
 pub enum DataKey {
     Proposal(u32),
+    Admin,
+    QuorumThreshold,
+    VotingDuration,
+    Initialized,
 }
 
 #[contract]
@@ -43,7 +47,26 @@ pub struct GovernanceContract;
 
 #[contractimpl]
 impl GovernanceContract {
-    pub fn initialize(_env: Env, _admin: Address, _quorum_threshold: u64, _voting_duration: u64) {
+    pub fn initialize(env: Env, admin: Address, quorum_threshold: u64, voting_duration: u64) {
+        if env.storage().instance().has(&DataKey::Initialized) {
+            panic!("already initialized");
+        }
+        env.storage().instance().set(&DataKey::Admin, &admin);
+        env.storage().instance().set(&DataKey::QuorumThreshold, &quorum_threshold);
+        env.storage().instance().set(&DataKey::VotingDuration, &voting_duration);
+        env.storage().instance().set(&DataKey::Initialized, &true);
+    }
+
+    pub fn admin(env: Env) -> Address {
+        env.storage().instance().get(&DataKey::Admin).unwrap()
+    }
+
+    pub fn quorum_threshold(env: Env) -> u64 {
+        env.storage().instance().get(&DataKey::QuorumThreshold).unwrap()
+    }
+
+    pub fn voting_duration(env: Env) -> u64 {
+        env.storage().instance().get(&DataKey::VotingDuration).unwrap()
     }
 
     pub fn create_proposal(env: Env, creator: Address, title: String) -> u32 {
