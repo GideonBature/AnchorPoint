@@ -98,6 +98,10 @@ impl YieldDistribution {
             .get(&DataKey::TotalStaked)
             .unwrap_or(0);
 
+        // Update state before external token transfer (reentrancy guard pattern).
+        // If nobody is staking yet, rewards accumulate but can't be distributed —
+        // they will be claimable once the first stake occurs (reward_per_token
+        // stays 0 until then, so the deposited tokens sit idle).
         let reward_token: Address = env.storage().instance().get(&DataKey::RewardToken).unwrap();
 
         // CEI: update state before external token transfer
@@ -116,6 +120,8 @@ impl YieldDistribution {
                 .set(&DataKey::RewardPerTokenStored, &rpt);
         }
 
+        // Transfer reward tokens into the contract after state is updated
+        let reward_token: Address = env.storage().instance().get(&DataKey::RewardToken).unwrap();
         // External interaction last
         token::Client::new(&env, &reward_token).transfer(
             &from,
@@ -123,6 +129,7 @@ impl YieldDistribution {
             &amount,
         );
 
+        // Topic: event name only; from + amount in data.
         env.events()
             .publish((symbol_short!("dep_rwd"),), (from, amount));
     }
@@ -145,6 +152,7 @@ impl YieldDistribution {
         // Settle any pending rewards before changing the stake
         Self::_update_reward(&env, &user);
 
+        // Update state before external token transfer (reentrancy guard pattern)
         let stake_token: Address = env.storage().instance().get(&DataKey::StakeToken).unwrap();
 
         // CEI: update state before external token transfer
@@ -162,6 +170,7 @@ impl YieldDistribution {
             .instance()
             .set(&DataKey::TotalStaked, &total.checked_add(amount).expect("total staked overflow"));
 
+        let stake_token: Address = env.storage().instance().get(&DataKey::StakeToken).unwrap();
         // External interaction last
         token::Client::new(&env, &stake_token).transfer(
             &user,
@@ -169,6 +178,7 @@ impl YieldDistribution {
             &amount,
         );
 
+        // Topic: event name only; user + amount in data.
         env.events()
             .publish((symbol_short!("staked"),), (user, amount));
     }
@@ -251,11 +261,8 @@ impl YieldDistribution {
             );
 
             env.events()
-<<<<<<< HEAD
                 .publish(symbol_short!("claimed"), (user, reward));
-=======
                 .publish((symbol_short!("claimed"),), (user, reward));
->>>>>>> upstream/main
         }
 
         reward

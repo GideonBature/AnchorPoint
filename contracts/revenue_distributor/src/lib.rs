@@ -159,6 +159,27 @@ mod tests {
     }
 
     #[test]
+    fn test_zero_balance_distribute() {
+        let env = Env::default();
+        env.mock_all_auths();
+
+        let admin = Address::generate(&env);
+        let treasury = Address::generate(&env);
+        let gov_stakers = Address::generate(&env);
+
+        let token_admin = Address::generate(&env);
+        let token_id = env.register_stellar_asset_contract_v2(token_admin.clone());
+        let token_client = token::Client::new(&env, &token_id.address());
+
+        let distributor_id = env.register_contract(None, RevenueDistributor);
+        let distributor_client = RevenueDistributorClient::new(&env, &distributor_id);
+        distributor_client.initialize(&admin, &treasury, &gov_stakers, &6000);
+
+        // Distributor has no balance — distribute should be a no-op
+        distributor_client.distribute(&token_id.address());
+
+        assert_eq!(token_client.balance(&gov_stakers), 0);
+        assert_eq!(token_client.balance(&treasury), 0);
     fn test_zero_balance_distribute_is_noop() {
         let env = Env::default();
         env.mock_all_auths();
@@ -183,6 +204,26 @@ mod tests {
     fn test_full_gov_share() {
         let env = Env::default();
         env.mock_all_auths();
+
+        let admin = Address::generate(&env);
+        let treasury = Address::generate(&env);
+        let gov_stakers = Address::generate(&env);
+
+        let token_admin = Address::generate(&env);
+        let token_id = env.register_stellar_asset_contract_v2(token_admin.clone());
+        let token_client = token::Client::new(&env, &token_id.address());
+
+        let distributor_id = env.register_contract(None, RevenueDistributor);
+        let distributor_client = RevenueDistributorClient::new(&env, &distributor_id);
+        // 100% to gov_stakers, 0% to treasury
+        distributor_client.initialize(&admin, &treasury, &gov_stakers, &10000);
+
+        token::StellarAssetClient::new(&env, &token_id.address()).mint(&distributor_id, &1000);
+        distributor_client.distribute(&token_id.address());
+
+        assert_eq!(token_client.balance(&gov_stakers), 1000);
+        assert_eq!(token_client.balance(&treasury), 0);
+        assert_eq!(token_client.balance(&distributor_id), 0);
         let admin = Address::generate(&env);
         let treasury = Address::generate(&env);
         let gov_stakers = Address::generate(&env);
@@ -205,6 +246,33 @@ mod tests {
     fn test_zero_gov_share() {
         let env = Env::default();
         env.mock_all_auths();
+
+        let admin = Address::generate(&env);
+        let treasury = Address::generate(&env);
+        let gov_stakers = Address::generate(&env);
+
+        let token_admin = Address::generate(&env);
+        let token_id = env.register_stellar_asset_contract_v2(token_admin.clone());
+        let token_client = token::Client::new(&env, &token_id.address());
+
+        let distributor_id = env.register_contract(None, RevenueDistributor);
+        let distributor_client = RevenueDistributorClient::new(&env, &distributor_id);
+        // 0% to gov_stakers, 100% to treasury
+        distributor_client.initialize(&admin, &treasury, &gov_stakers, &0);
+
+        token::StellarAssetClient::new(&env, &token_id.address()).mint(&distributor_id, &1000);
+        distributor_client.distribute(&token_id.address());
+
+        assert_eq!(token_client.balance(&gov_stakers), 0);
+        assert_eq!(token_client.balance(&treasury), 1000);
+        assert_eq!(token_client.balance(&distributor_id), 0);
+    }
+
+    #[test]
+    fn test_weight_precision_with_odd_amounts() {
+        let env = Env::default();
+        env.mock_all_auths();
+
         let admin = Address::generate(&env);
         let treasury = Address::generate(&env);
         let gov_stakers = Address::generate(&env);
@@ -245,6 +313,21 @@ mod tests {
         let treasury = Address::generate(&env);
         let gov_stakers = Address::generate(&env);
 
+        let token_admin = Address::generate(&env);
+        let token_id = env.register_stellar_asset_contract_v2(token_admin.clone());
+        let token_client = token::Client::new(&env, &token_id.address());
+
+        let distributor_id = env.register_contract(None, RevenueDistributor);
+        let distributor_client = RevenueDistributorClient::new(&env, &distributor_id);
+        // 30% gov, 70% treasury
+        distributor_client.initialize(&admin, &treasury, &gov_stakers, &3000);
+
+        token::StellarAssetClient::new(&env, &token_id.address()).mint(&distributor_id, &1000);
+        distributor_client.distribute(&token_id.address());
+
+        assert_eq!(token_client.balance(&gov_stakers), 300);
+        assert_eq!(token_client.balance(&treasury), 700);
+        assert_eq!(token_client.balance(&distributor_id), 0);
         let distributor_id = env.register_contract(None, RevenueDistributor);
         let client = RevenueDistributorClient::new(&env, &distributor_id);
         client.initialize(&admin, &treasury, &gov_stakers, &10001);

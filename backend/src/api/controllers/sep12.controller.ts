@@ -366,6 +366,10 @@ export class Sep12Controller {
         return res.status(400).json({ error: 'upload_id and account are required' });
       }
 
+      if (req.user && req.user.publicKey !== account) {
+        return res.status(403).json({ error: 'Forbidden: session account does not match request account' });
+      }
+
       const record = uploadStore.get(upload_id);
 
       if (!record || record.status === 'EXPIRED') {
